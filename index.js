@@ -3,8 +3,6 @@ const Config = require('./UserConfig.json');
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const https = require('https');
 fs = require('fs');
-const WriteOutput = require('./WriteOutput')
-
 
 var req = new XMLHttpRequest();
 const HTMLHEAD = `<!DOCTYPE html>
@@ -103,56 +101,86 @@ function treeIteration(data, count, function_ptr){
 function WriteOutput(node) {
     let HtmlText;
     let CSSText;
-    var temp = node.id.replace(':', '-');
-    temp = temp.replace(';', '-');
+    var temp = node.id;
+    temp = temp.replace(/:/g, '-');
+    temp = temp.replace(/;/g, '-');
     const parsedId = 'css-' + temp;
+    const wtf = node.id;
     console.log("node is: " + node.id);
-    if (node.fills === undefined || node.fills[0] === undefined)
-        return;
-    if (node.fills[0].type === "IMAGE") {
-        const wtf = node.id;
-        console.log(wtf);
+    let acceptedCase = false;
+    if (node.fills !== undefined && node.fills[0] !== undefined && node.fills[0].type === "IMAGE") {
+
         HtmlText = `<div class="${parsedId}">
 <img src="${imageMap.images[wtf]}" alt="" class="${parsedId}-img"> 
 </div>`;
-        CSSText = `.${parsedId}{
-position: absolute;
-top: ${ 1* node.absoluteBoundingBox.y + 3000 + 1443}px;
-left: ${1 * node.absoluteBoundingBox.x + 4332.7460937}px;
-width: ${node.absoluteBoundingBox.width}px;
-height: ${node.absoluteBoundingBox.height}px;
-}
-`;
+        acceptedCase = true;
     }
     else if (node.type !== undefined && node.type === "TEXT") {
-        let color = null;
-        if (node.fills && node.fills[0])
-            color = node.fills[0].color;
-
-        CSSText = `.${parsedId}{
-position: absolute;
-top: ${1 * node.absoluteBoundingBox.y + 3000 + 1443}px;
-left: ${1 * node.absoluteBoundingBox.x + 4332.7460937}px;
-width: ${node.absoluteBoundingBox.width}px;
-height: ${node.absoluteBoundingBox.height}px;
-font-weight: ${node.style.fontWeight};
-font-size: ${node.style.fontSize}px;
-line-height: ${node.style.lineHeightPx}px ;
-font-family: ${node.style.fontFamily === undefined? "inherit": node.style.fontFamily};
-${ color? `color: rgba(${color.r * 255}, ${color.g * 255}, ${color.b * 255}, ${color.a})`: '' };
-
-            
-}`
         HtmlText = `<div class = "${parsedId}">
 ${node.characters}
 </div>`;
+        acceptedCase = true;
     }
+    else if (node.type === "GROUP" || node.type === "RECTANGLE" || node.type === "LINE"){
+        let color = null;
+        if (node.fills && node.fills[0])
+            color = node.fills[0].color;
+        HtmlText = `<div class=${parsedId}></div>`
+        acceptedCase = true;
+    }
+    //CSS constructor case "business bus"
+    if (acceptedCase === true){
 
-    if (node.fills[0] !== undefined)
-        if ( node.fills[0].type === "IMAGE" || (node.type !== undefined && node.type === "TEXT")){
-            fs.appendFileSync(outputHTML, HtmlText, stderr);
-            fs.appendFileSync(outputCSS, CSSText, stderr);
+        CSSText = `.${parsedId}{
+position: absolute;`
+            //case: bounding box is defined
+            if (node.absoluteBoundingBox !== undefined) {
+                CSSText += `top: ${1 * node.absoluteBoundingBox.y + 3000 + 1443}px;
+left: ${1 * node.absoluteBoundingBox.x + 4332.7460937}px;
+width: ${node.absoluteBoundingBox.width}px;
+height: ${node.absoluteBoundingBox.height}px;\n`;
+            }
+            //case: style is defined
+        if (node.style !== undefined){
+        CSSText +=`font-weight: ${node.style.fontWeight};
+        font-size: ${node.style.fontSize}px;
+        line-height: ${node.style.lineHeightPx}px ;
+        font-family: ${node.style.fontFamily === undefined ? "inherit" : node.style.fontFamily};\n`;
+        switch (node.style.textAlignHorizontal){
+            case("CENTER"):
+                CSSText += 'text-align: center;'
+                break;
+            case("LEFT"):
+                CSSText += 'text-align: left;'
+                break
+            case(undefined):
+                break;
+            default:
+                break;
         }
+
+            }
+        //case: defining the color / background color and opacity
+
+        if (node.fills !== undefined && node.fills.length > 0 && node.fills[0].color !== undefined){
+            let color = node.fills[0].color;
+            let opacity = node.fills[0].opacity;
+            CSSText += `${node.type === "TEXT"? 'color: ': 'background-color: '} rgba(${color.r * 255}, ${color.g * 255}, ${color.b * 255}, ${opacity === undefined? color.a : opacity});\n`
+
+        }
+        if (node.strokes !== undefined && node.strokes.length > 0){
+            let strokes = node.strokes[0]
+            CSSText += `border: ${node.strokeWeight}px solid rgba(${strokes.color.r * 255}, ${strokes.color.g * 255}, ${strokes.color.b * 255}, ${strokes.color.a});\n`;
+        }
+        if (node.cornerRadius !== undefined ){
+            CSSText +=  `border-radius: ${node.cornerRadius}px;\n`
+        }
+        CSSText +='\n}';
+        fs.appendFileSync(outputHTML, HtmlText, stderr);
+        fs.appendFileSync(outputCSS, CSSText, stderr);
+}
+
+
 
 }
 
