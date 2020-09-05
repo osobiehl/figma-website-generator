@@ -1,6 +1,9 @@
 {
   "username": "default",
   "token": "60763-387c3480-dd91-4dca-b30a-930ed7d2431b",
-  "key" : "VoGAJ9AkuCcnnlufdvlMQU",
-  "mod": "/nodes?ids=1898%3A202"
+  "key" : "YJfBkQkRusw7PO7R1aZP3q",
+  "mod": "/nodes?ids=1083%3A5",
+ "FindLargestCoords": false,
+  "UseWidthPercentage": true,
+  "UseHeightPercentage": false
 }
